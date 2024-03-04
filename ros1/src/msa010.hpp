@@ -155,17 +155,17 @@ class msa010 {
     return transferred;
   }
 
-  std::size_t read_some(std::string& s) {
-#define MAX_SIZE ((25 * 25 + 22) * 4 * 4)
-    std::size_t len;
-    boost::system::error_code ec;
+//   std::size_t read_some(std::string& s) {
+// #define MAX_SIZE ((25 * 25 + 22) * 4 * 4)
+//     std::size_t len;
+//     boost::system::error_code ec;
 
-    s.reserve(MAX_SIZE);
-    len = this->_sp.read_some(asio::buffer(s, MAX_SIZE), ec);
-    if (ec) this->_sp.close();
+//     s.reserve(MAX_SIZE);
+//     len = this->_sp.read_some(asio::buffer(s, MAX_SIZE), ec);
+//     if (ec) this->_sp.close();
 
-    return len;
-  }
+//     return len;
+//   }
 
   inline msa010& operator<<(const std::string& s) {
     boost::system::error_code ec;
