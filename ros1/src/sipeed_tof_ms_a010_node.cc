@@ -3,6 +3,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointField.h>
+#include <sensor_msgs/CameraInfo.h>
 #include <std_msgs/Header.h>
 
 #include <iostream>
@@ -31,15 +32,18 @@ int main(int argc, char **argv) {
   std::stringstream ss;
 
   ss.str("");
-  ss << to_device << "/depth";
+  ss << to_device << "/depth/image_raw";
   ros::Publisher publisher_depth =
       node_obj.advertise<sensor_msgs::Image>(strdup(ss.str().c_str()), 10);
 
   ss.str("");
-  ss << to_device << "/cloud";
+  ss << to_device << "/depth/points";
   ros::Publisher publisher_pointcloud =
-      node_obj.advertise<sensor_msgs::PointCloud2>(strdup(ss.str().c_str()),
-                                                   10);
+      node_obj.advertise<sensor_msgs::PointCloud2>(strdup(ss.str().c_str()), 10);
+
+  ss.str("");
+  ss << to_device << "/depth/camera_info";
+  ros::Publisher camera_info = node_obj.advertise<sensor_msgs::CameraInfo>(strdup(ss.str().c_str()), 10);
 
   // 定义发送数据频率，如果频率高的话注意同时调高上一个buffer size
   ros::Rate loop_rate(30);
@@ -92,7 +96,7 @@ int main(int argc, char **argv) {
     std::cout << "u0: " << uvf_parms[2] << std::endl;
     std::cout << "v0: " << uvf_parms[3] << std::endl;
 
-    a010 << "AT+UNIT=4\r";
+    a010 << "AT+UNIT=0\r";
     a010 >> s;
     if (s.compare("OK\r\n")) {  // not this serial port
       continue;
@@ -127,7 +131,7 @@ int main(int argc, char **argv) {
       header.frame_id = "map";
       {
         sensor_msgs::Image msg_depth =
-            *cv_bridge::CvImage(header, "mono8", md).toImageMsg().get();
+            *cv_bridge::CvImage(header, "8UC1", md).toImageMsg().get();
         publisher_depth.publish(msg_depth);
       }
       {
@@ -167,7 +171,11 @@ int main(int argc, char **argv) {
           for (int i = 0; i < pcmsg.width; i++) {
             float cx = (((float)i) - u0) / fox;
             float cy = (((float)j) - v0) / foy;
-            float dst = ((float)depth[j * (pcmsg.width) + i]) / 1000;
+            // float dst = ((float)depth[j * (pcmsg.width) + i]) / 1000;
+
+            // AT+UNIT = 0, (p/5.1)^2
+            float dst = std::pow((((float)depth[j * (pcmsg.width) + i]) / 5.1), 2) / 1000;
+
             // float x = dst * cx;
             // float y = dst * cy;
             // float z = dst;
@@ -187,7 +195,18 @@ int main(int argc, char **argv) {
           }
         publisher_pointcloud.publish(pcmsg);
       }
-
+      {
+        sensor_msgs::CameraInfo cam_info;
+        cam_info.header = header;
+        cam_info.height = 100;
+        cam_info.width = 100;
+        cam_info.distortion_model = "plumb_bob";
+        cam_info.D = {0, 0, 0, 0, 0};
+        cam_info.K = {uvf_parms[0], 0, uvf_parms[2], 0, uvf_parms[1], uvf_parms[3], 0, 0, 1};
+        cam_info.R = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+        cam_info.P = {uvf_parms[0], 0, uvf_parms[2], 0, 0, uvf_parms[1], uvf_parms[3], 0, 0, 0, 1, 0};
+        camera_info.publish(cam_info);
+      }
       free(f);
       // 读取和更新ROS topics，如果没有spinonce()或spin()，节点不会发布消息。
       ros::spinOnce();
