@@ -179,12 +179,24 @@ int main(int argc, char **argv) {
             // float x = dst * cx;
             // float y = dst * cy;
             // float z = dst;
-            float x = dst * cx;
-            float z = -dst * cy;
-            float y = dst;
-            *((float *)(ptr + 0)) = x;
-            *((float *)(ptr + 4)) = y;
-            *((float *)(ptr + 8)) = z;
+
+            if (((int)depth[j * (pcmsg.width) + i]) == 255) {
+              float x = std::numeric_limits<float>::quiet_NaN();
+              float y = std::numeric_limits<float>::quiet_NaN();
+              float z = std::numeric_limits<float>::quiet_NaN();
+              *((float *)(ptr + 0)) = x;
+              *((float *)(ptr + 4)) = y;
+              *((float *)(ptr + 8)) = z;
+            }
+            else {
+              float x = dst * cx;
+              float z = -dst * cy;
+              float y = dst;
+              *((float *)(ptr + 0)) = x;
+              *((float *)(ptr + 4)) = y;
+              *((float *)(ptr + 8)) = z;
+            }
+
             const uint8_t *color = color_lut_jet[depth[j * (pcmsg.width) + i]];
             uint32_t color_r = color[0];
             uint32_t color_g = color[1];
