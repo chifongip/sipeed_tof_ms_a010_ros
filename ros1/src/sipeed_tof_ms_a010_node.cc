@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
       ROS_INFO("Publishing %8u's frame:%p", count, f);
       std_msgs::Header header;
       header.stamp = ros::Time::now();
-      header.frame_id = "map";
+      header.frame_id = "tof_link";
       {
         sensor_msgs::Image msg_depth =
             *cv_bridge::CvImage(header, "8UC1", md).toImageMsg().get();
