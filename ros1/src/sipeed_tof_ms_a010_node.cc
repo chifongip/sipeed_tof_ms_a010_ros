@@ -20,7 +20,9 @@ int main(int argc, char **argv) {
   // 创建一个Nodehandle对象，用来与ROS进行通信
   ros::NodeHandle node_obj("~");
   std::string s;
+  std::string msg_frame_id;
   node_obj.param<std::string>("device", s, "/dev/ttyUSB0");
+  node_obj.param<std::string>("frame_id", msg_frame_id, "dep_cam_link");
   std::cout << "use device: " << s << std::endl;
 
   auto a010 = std::make_unique<msa010>(strdup(s.c_str()));
@@ -29,21 +31,20 @@ int main(int argc, char **argv) {
   // size参数。
   std::string to_device(s.substr(5));
 
-  std::stringstream ss;
+  // std::stringstream ss;
 
-  ss.str("");
-  ss << to_device << "/depth/image_raw";
-  ros::Publisher publisher_depth =
-      node_obj.advertise<sensor_msgs::Image>(strdup(ss.str().c_str()), 10);
+  // ss.str("");
+  // ss << to_device << "/depth/image_raw";
+  // ros::Publisher publisher_depth = node_obj.advertise<sensor_msgs::Image>(strdup(ss.str().c_str()), 10);
+  ros::Publisher publisher_depth = node_obj.advertise<sensor_msgs::Image>("depth/image_raw", 10);
 
-  ss.str("");
-  ss << to_device << "/depth/points";
-  ros::Publisher publisher_pointcloud =
-      node_obj.advertise<sensor_msgs::PointCloud2>(strdup(ss.str().c_str()), 10);
+  // ss.str("");
+  // ss << to_device << "/depth/points";
+  ros::Publisher publisher_pointcloud = node_obj.advertise<sensor_msgs::PointCloud2>("depth/points", 10);
 
-  ss.str("");
-  ss << to_device << "/depth/camera_info";
-  ros::Publisher camera_info = node_obj.advertise<sensor_msgs::CameraInfo>(strdup(ss.str().c_str()), 10);
+  // ss.str("");
+  // ss << to_device << "/depth/camera_info";
+  ros::Publisher camera_info = node_obj.advertise<sensor_msgs::CameraInfo>("depth/camera_info", 10);
 
   // 定义发送数据频率，如果频率高的话注意同时调高上一个buffer size
   ros::Rate loop_rate(30);
@@ -128,7 +129,7 @@ int main(int argc, char **argv) {
       ROS_INFO("Publishing %8u's frame:%p", count, f);
       std_msgs::Header header;
       header.stamp = ros::Time::now();
-      header.frame_id = "tof_link";
+      header.frame_id = msg_frame_id;
       {
         sensor_msgs::Image msg_depth =
             *cv_bridge::CvImage(header, "8UC1", md).toImageMsg().get();
@@ -189,9 +190,9 @@ int main(int argc, char **argv) {
               *((float *)(ptr + 8)) = z;
             }
             else {
-              float x = dst * cx;
+              float y = -dst * cx;
               float z = -dst * cy;
-              float y = dst;
+              float x = dst;
               *((float *)(ptr + 0)) = x;
               *((float *)(ptr + 4)) = y;
               *((float *)(ptr + 8)) = z;

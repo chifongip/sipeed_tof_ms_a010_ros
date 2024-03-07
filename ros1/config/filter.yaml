@@ -1,0 +1,3 @@
+sub_topic: sipeed_tof_ms_a010/ttyUSB0/depth/points
+MeanK: 20
+StddevMulThresh: 0.5
