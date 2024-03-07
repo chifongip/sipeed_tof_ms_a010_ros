@@ -13,6 +13,9 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   pcl_ros
+  cv_bridge
+  tf2_ros
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -108,7 +111,7 @@ find_package(OpenCV REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES sipeed_tof_ms_a010
-  CATKIN_DEPENDS roscpp rospy std_msgs pcl_ros
+  CATKIN_DEPENDS roscpp rospy std_msgs pcl_ros cv_bridge tf2_ros tf
 #  DEPENDS system_lib
 )
 
@@ -156,6 +159,11 @@ target_link_libraries(point_cloud_processing_node
   pcl_common
   pcl_io
   pcl_filters
+)
+
+catkin_install_python(PROGRAMS
+  src/cliff_detector.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 ## Specify libraries to link a library or executable target against

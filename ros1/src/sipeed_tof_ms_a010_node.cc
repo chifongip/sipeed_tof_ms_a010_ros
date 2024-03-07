@@ -190,9 +190,9 @@ int main(int argc, char **argv) {
               *((float *)(ptr + 8)) = z;
             }
             else {
+              float x = dst;
               float y = -dst * cx;
               float z = -dst * cy;
-              float x = dst;
               *((float *)(ptr + 0)) = x;
               *((float *)(ptr + 4)) = y;
               *((float *)(ptr + 8)) = z;

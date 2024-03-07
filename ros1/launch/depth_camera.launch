@@ -1,9 +1,28 @@
 <launch>
 
-	<!-- <node pkg="tf" type="static_transform_publisher" name="tof_link_to_base_link" 
-		args="0.18 0 0.34 0 0.1305262 0 0.9914449 base_link tof_link 100" /> -->
+	<node pkg="tf" type="static_transform_publisher" name="dep_cam_front_link_to_base_link" 
+		args="0 0 0.16 0 0.1305262 0 0.9914449 base_link dep_cam_front_link 100" />
+	
+	<group ns="dep_cam_front">
+		<node pkg="sipeed_tof_ms_a010" type="node" name="sipeed_tof_ms_a010" output="screen">
+			<param name="device" value="/dev/ttyUSB0" />
+			<param name="frame_id" value="dep_cam_front_link" />
+		</node>
+		<node pkg="sipeed_tof_ms_a010" type="point_cloud_processing_node" name="point_cloud_processing_node">
+			<param name="sub_topic" value="sipeed_tof_ms_a010/depth/points" />
+			<param name="MeanK" value="20" />
+			<param name="StddevMulThresh" value="0.5" />
+		</node>
+		<node pkg="sipeed_tof_ms_a010" type="cliff_detector.py" name="cliff_detector" output="screen">
+			<param name="img_topic" value="sipeed_tof_ms_a010/depth/image_raw" />
+			<param name="info_topic" value="sipeed_tof_ms_a010/depth/camera_info" />
+			<param name="frame_id" value="dep_cam_front_link" />
+			<param name="cam_height" value="0.16" />
+			<param name="cam_angle" value="15" />
+		</node>
+	</group>
 
-	<node pkg="tf" type="static_transform_publisher" name="dep_cam_left_link_to_base_link" 
+	<!-- <node pkg="tf" type="static_transform_publisher" name="dep_cam_left_link_to_base_link" 
 		args="0.17 0.085 0.34 -0.0337827 0.1260786 0.2566048 0.9576622 base_link dep_cam_left_link 100" />
 
 	<node pkg="tf" type="static_transform_publisher" name="dep_cam_right_link_to_base_link" 
@@ -15,7 +34,6 @@
 			<param name="frame_id" value="dep_cam_left_link" />
 		</node>
 		<node pkg="sipeed_tof_ms_a010" type="point_cloud_processing_node" name="point_cloud_processing_node">
-			<!-- <rosparam command="load" file="$(find sipeed_tof_ms_a010)/config/filter.yaml" /> -->
 			<param name="sub_topic" value="sipeed_tof_ms_a010/depth/points" />
 			<param name="MeanK" value="20" />
 			<param name="StddevMulThresh" value="0.5" />
@@ -28,12 +46,11 @@
 			<param name="frame_id" value="dep_cam_right_link" />
 		</node>
 		<node pkg="sipeed_tof_ms_a010" type="point_cloud_processing_node" name="point_cloud_processing_node">
-			<!-- <rosparam command="load" file="$(find sipeed_tof_ms_a010)/config/filter.yaml" /> -->
 			<param name="sub_topic" value="sipeed_tof_ms_a010/depth/points" />
 			<param name="MeanK" value="20" />
 			<param name="StddevMulThresh" value="0.5" />
 		</node>
-	</group>
+	</group> -->
 
 	
 
