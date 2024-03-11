@@ -2,9 +2,12 @@
 
 import rospy
 from sensor_msgs.msg import Image, CameraInfo
+# from geometry_msgs.msg import TransformStamped, PointStamped
 from sensor_msgs.msg import LaserScan
 from cv_bridge import CvBridge
 import cv2
+# import tf
+# import tf2_ros
 import numpy as np
 import math
 
@@ -26,6 +29,11 @@ class ImageSubscriber:
         cam_y = rospy.get_param("cam_y", 0.0)
         cam_z = rospy.get_param("cam_z", 0.3)
 
+        
+
+        # self.tfBuffer = tf2_ros.Buffer()
+        # self.listener = tf2_ros.TransformListener(self.tfBuffer)
+
         self.kernel = np.ones((3, 3), np.uint8)
 
         self.fx = None
@@ -41,10 +49,6 @@ class ImageSubscriber:
         self.horizontal_fov = np.deg2rad(70)
 
         self.dist_to_ground = np.zeros(100)
-
-        self.row_upper = 70
-        self.col_left = 20
-        self.col_right = 80
 
         # ZYX = 0, 15, 0
         self.trans = np.array([[ 0.9659258, 0.0000000, 0.2588190, cam_x], 
@@ -100,6 +104,20 @@ class ImageSubscriber:
 
         self.calcDeltaAngleForImgRows()
         self.calcGroundDistancesForImgRows()
+
+        # try:
+        #     trans = self.tfBuffer.lookup_transform("base_link", self.frame_id, rospy.Time.now(), rospy.Duration(10.0))
+        #     translation_matrix = tf.transformations.translation_matrix((trans.transform.translation.x,
+        #                                                           trans.transform.translation.y,
+        #                                                           trans.transform.translation.z))
+        #     quaternion = (trans.transform.rotation.x,
+        #                   trans.transform.rotation.y,
+        #                   trans.transform.rotation.z,
+        #                   trans.transform.rotation.w)
+        #     rotation_matrix = tf.transformations.quaternion_matrix(quaternion)
+        #     self.trans_matrix = tf.transformations.concatenate_matrices(translation_matrix, rotation_matrix)
+        # except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+        #     print(e)
         
         self.camera_info_sub.unregister()
 
@@ -116,33 +134,52 @@ class ImageSubscriber:
             # img_cliff = img.copy()
             img_cliff = np.zeros([100, 100])
             img_edge = np.zeros([100, 100])
+            # img_result = np.zeros([100, 100])
 
-            for col in range(self.col_left, self.col_right):
-                for row in range(self.img_height - 1, self.row_upper - 1, -1):
+            row_upper = 70
+            col_left = 20
+            col_right = 80
+
+            for col in range(col_left, col_right):
+                for row in range(self.img_height - 1, row_upper - 1, -1):
                     dst = pow(((img[row, col]) / 5.1), 2) / 1000
                     if dst > (self.dist_to_ground[row] + self.cliff_threshold):
                         # and dst > self.range_min and dst < self.range_max:
                         img_cliff[row][col] = 0
                     else:
                         img_cliff[row][col] = 255
+
+            # for col in range(self.img_width):
+            #     for row in range(self.img_height):
+            #         if row < row_upper or col < col_left or col > col_right - 1: 
+            #             img_cliff[row][col] = 0
+            #         else: 
+            #             dst = pow(((img[row, col]) / 5.1), 2) / 1000
+            #             if dst > (self.dist_to_ground[row] + self.cliff_threshold):
+            #                 # and dst > self.range_min and dst < self.range_max:
+            #                 img_cliff[row][col] = 0
+            #             else:
+            #                 img_cliff[row][col] = 255
             
             img_cliff = cv2.dilate(img_cliff, self.kernel, iterations=3)
             img_cliff = cv2.erode(img_cliff, self.kernel, iterations=3)
 
+            # cliff_pts_b = []
             p_dst = np.zeros(100)
             
-            for col in range(self.col_left, self.col_right):
-                for row in range(self.img_height - 2, self.row_upper - 1, -1):   # ignore the last row
+            for col in range(col_left, col_right):
+                for row in range(self.img_height - 2, row_upper - 1, -1):   # ignore the last row
                     if img_cliff[row][col] == 255 and img_cliff[row - 1][col] == 0:
                         img_edge[row][col] = 255
+                        # cliff_pts_b.append([row, col])
 
                         u = (col - self.cx) / self.fx
                         v = (row - self.cy) / self.fy
                         dst = pow(((img[row, col]) / 5.1), 2) / 1000
 
-                        x = dst 
-                        y = -dst * u 
-                        z = -dst * v 
+                        x = dst  
+                        y = -dst * u  
+                        z = -dst * v
 
                         p = np.array([x, y, z, 1])
 
@@ -153,6 +190,16 @@ class ImageSubscriber:
                         break
 
             img_edge = img_edge.astype(np.float32)
+                    
+            # cliff_pts_b = np.asarray(cliff_pts_b)
+
+            # for col in range(self.img_width):
+            #     for row in range(self.img_height):
+            #         if img_edge[row][col] == 0:
+            #             img_result[row][col] = np.inf
+            #         else:
+            #             dst_result = pow(((img[row, col]) / 5.1), 2) / 1000
+            #             img_result[row][col] = dst_result
 
             scan_msg = LaserScan()
 
@@ -166,12 +213,76 @@ class ImageSubscriber:
             scan_msg.scan_time = 1 / self.img_freq
             scan_msg.range_min = self.range_min
             scan_msg.range_max = self.range_max
+
             scan_msg.ranges = p_dst[::-1]
+
             self.scan_pub.publish(scan_msg)
+
 
             img_msg = self.bridge.cv2_to_imgmsg(img_edge, encoding="32FC1")
             img_msg.header = msg.header
+
             self.debug_pub.publish(img_msg)
+            
+            # if len(cliff_pts_b) > 0:
+            #     for pt in cliff_pts_b:
+            #         row = pt[0]
+            #         col = pt[1]
+
+            #         u = (col - self.cx) / self.fx
+            #         v = (row - self.cy) / self.fy
+            #         dst = pow(((img[row, col]) / 5.1), 2) / 1000
+
+            #         x = dst  
+            #         y = -dst * u  
+            #         z = -dst * v
+
+            #         p = np.array([x, y, z, 1])
+
+            #         p_trans = np.dot(self.trans, p)
+
+            #         p_dst.append(math.sqrt(pow(p_trans[0], 2) + pow(p_trans[1], 2)))
+
+
+            # img_result = img_result.astype(np.float32)
+    
+
+            # col = 50
+            # for col in range(self.img_width):
+            #     for row in range(self.img_height - 1, 0, -1):
+            #         u_curr = (col - self.cx) / self.fx
+            #         v_curr = (row - self.cy) / self.fy
+            #         dst_curr = pow(((img[row, col]) / 5.1), 2) / 1000
+
+            #         x_curr = dst_curr  
+            #         y_curr = -dst_curr * u_curr  
+            #         z_curr = -dst_curr * v_curr
+
+            #         p_curr = np.array([x_curr, y_curr, z_curr, 1])
+            #         p_curr_trans = np.dot(self.trans_matrix, p_curr)
+
+            #         u_next = (col - self.cx) / self.fx
+            #         v_next = (row - 1 - self.cy) / self.fy
+            #         dst_next = pow(((img[row - 1, col]) / 5.1), 2) / 1000
+                    
+            #         x_next = dst_next  
+            #         y_next = -dst_next * u_next 
+            #         z_next = -dst_next * v_next
+
+            #         p_next = np.array([x_next, y_next, z_next, 1])
+            #         p_next_trans = np.dot(self.trans_matrix, p_next)
+
+            #         z_diff = p_curr_trans[2] - p_next_trans[2]
+
+            #         if img[row - 1, col] > 200:
+            #             break
+            #         elif z_diff > self.cliff_threshold:
+            #             # print(row)
+            #             # cv2.circle(img, (col, row), 3, (0, 0, 0), -1)
+            #             break
+
+            # cv2.imshow('Image', img_result)
+            # cv2.waitKey(1)  # Refresh the display
 
         except Exception as e:
             print(e)
