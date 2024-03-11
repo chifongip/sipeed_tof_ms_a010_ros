@@ -36,17 +36,17 @@ int main(int argc, char **argv) {
   // ss.str("");
   // ss << to_device << "/depth/image_raw";
   // ros::Publisher publisher_depth = node_obj.advertise<sensor_msgs::Image>(strdup(ss.str().c_str()), 10);
-  ros::Publisher publisher_depth = node_obj.advertise<sensor_msgs::Image>("depth/image_raw", 10);
+  ros::Publisher publisher_depth = node_obj.advertise<sensor_msgs::Image>("depth/image_raw", 1);
 
   // ss.str("");
   // ss << to_device << "/depth/points";
   // ros::Publisher publisher_pointcloud = node_obj.advertise<sensor_msgs::PointCloud2>(strdup(ss.str().c_str()), 10);
-  ros::Publisher publisher_pointcloud = node_obj.advertise<sensor_msgs::PointCloud2>("depth/points", 10);
+  ros::Publisher publisher_pointcloud = node_obj.advertise<sensor_msgs::PointCloud2>("depth/points", 1);
 
   // ss.str("");
   // ss << to_device << "/depth/camera_info";
   // ros::Publisher camera_info = node_obj.advertise<sensor_msgs::CameraInfo>(strdup(ss.str().c_str()), 10);
-  ros::Publisher camera_info = node_obj.advertise<sensor_msgs::CameraInfo>("depth/camera_info", 10);
+  ros::Publisher camera_info = node_obj.advertise<sensor_msgs::CameraInfo>("depth/camera_info", 1);
 
   // 定义发送数据频率，如果频率高的话注意同时调高上一个buffer size
   ros::Rate loop_rate(30);
