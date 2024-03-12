@@ -10,28 +10,28 @@ import math
 
 class ImageSubscriber:
     def __init__(self):
-        self.img_topic = rospy.get_param("img_topic", "sipeed_tof_ms_a010/depth/image_raw")
-        self.info_topic = rospy.get_param("info_topic", "sipeed_tof_ms_a010/depth/camera_info")
-        self.frame_id = rospy.get_param("frame_id", "dep_cam_front_link")
+        self.img_topic = rospy.get_param("cliff_detector/img_topic", "sipeed_tof_ms_a010/depth/image_raw")
+        self.info_topic = rospy.get_param("cliff_detector/info_topic", "sipeed_tof_ms_a010/depth/camera_info")
+        self.frame_id = rospy.get_param("cliff_detector/frame_id", "dep_cam_front_link")
         
-        self.cam_height = rospy.get_param("cam_height", 0.3)
-        self.cam_angle = rospy.get_param("cam_angle", 15)
-        self.cliff_threshold = rospy.get_param("cliff_threshold", 0.1)
+        self.cam_height = rospy.get_param("cliff_detector/cam_height", 0.3)
+        self.cam_angle = rospy.get_param("cliff_detector/cam_angle", 15)
+        self.cliff_threshold = rospy.get_param("cliff_detector/cliff_threshold", 0.1)
 
-        self.img_freq = rospy.get_param("img_freq", 10)
-        self.range_min = rospy.get_param("range_min", 0.2)
-        self.range_max = rospy.get_param("range_max", 2.5)
+        self.img_freq = rospy.get_param("cliff_detector/img_freq", 10)
+        self.range_min = rospy.get_param("cliff_detector/range_min", 0.2)
+        self.range_max = rospy.get_param("cliff_detector/range_max", 2.5)
 
-        cam_x = rospy.get_param("cam_x", 0.2)
-        cam_y = rospy.get_param("cam_y", 0.0)
-        cam_z = rospy.get_param("cam_z", 0.3)
+        cam_x = rospy.get_param("cliff_detector/cam_x", 0.2)
+        cam_y = rospy.get_param("cliff_detector/cam_y", 0.0)
+        cam_z = rospy.get_param("cliff_detector/cam_z", 0.3)
 
-        self.row_upper = rospy.get_param("row_upper", 70)
-        self.col_left = rospy.get_param("col_left", 20)
-        self.col_right = rospy.get_param("col_right", 80)
+        self.row_upper = rospy.get_param("cliff_detector/row_upper", 70)
+        self.col_left = rospy.get_param("cliff_detector/col_left", 20)
+        self.col_right = rospy.get_param("cliff_detector/col_right", 80)
 
-        self.skip_row_upper = rospy.get_param("skip_row_upper", 1)
-        self.skip_row_bottom = rospy.get_param("skip_row_bottom", 1)
+        self.skip_row_upper = rospy.get_param("cliff_detector/skip_row_upper", 1)
+        self.skip_row_bottom = rospy.get_param("cliff_detector/skip_row_bottom", 1)
 
         self.kernel = np.ones((3, 3), np.uint8)
 
@@ -123,7 +123,7 @@ class ImageSubscriber:
             for col in range(self.col_left, self.col_right):
                 for row in range(self.img_height - 1, self.row_upper - 1, -1):
                     dst = pow(((img[row, col]) / 5.1), 2) / 1000
-                    if dst > (self.dist_to_ground[row] + self.cliff_threshold):
+                    if dst > (self.dist_to_ground[row] + self.cliff_threshold) and img[row, col] != 255:
                         # and dst > self.range_min and dst < self.range_max:
                         img_cliff[row][col] = 0
                     else:
@@ -176,7 +176,7 @@ class ImageSubscriber:
 
             img_cliff_msg = self.bridge.cv2_to_imgmsg(img_cliff, encoding="32FC1")
             img_cliff_msg.header = msg.header
-            self.img_pub.publish(img_cliff_msg)
+            self.cliff_pub.publish(img_cliff_msg)
 
             img_edge_msg = self.bridge.cv2_to_imgmsg(img_edge, encoding="32FC1")
             img_edge_msg.header = msg.header
