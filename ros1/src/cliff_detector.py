@@ -26,6 +26,13 @@ class ImageSubscriber:
         cam_y = rospy.get_param("cam_y", 0.0)
         cam_z = rospy.get_param("cam_z", 0.3)
 
+        self.row_upper = rospy.get_param("row_upper", 70)
+        self.col_left = rospy.get_param("col_left", 20)
+        self.col_right = rospy.get_param("col_right", 80)
+
+        self.skip_row_upper = rospy.get_param("skip_row_upper", 1)
+        self.skip_row_bottom = rospy.get_param("skip_row_bottom", 1)
+
         self.kernel = np.ones((3, 3), np.uint8)
 
         self.fx = None
@@ -41,10 +48,6 @@ class ImageSubscriber:
         self.horizontal_fov = np.deg2rad(70)
 
         self.dist_to_ground = np.zeros(100)
-
-        self.row_upper = 70
-        self.col_left = 20
-        self.col_right = 80
 
         # ZYX = 0, 15, 0
         self.trans = np.array([[ 0.9659258, 0.0000000, 0.2588190, cam_x], 
@@ -70,7 +73,7 @@ class ImageSubscriber:
         self.camera_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, 
             self.camera_info_callback, queue_size=1)
         
-        self.img_pub = rospy.Publisher("depth/cliff", Image, queue_size=1)
+        self.cliff_pub = rospy.Publisher("depth/cliff", Image, queue_size=1)
         self.debug_pub = rospy.Publisher("depth/debug_image", Image, queue_size=1)
 
         self.scan_pub = rospy.Publisher("depth/scan", LaserScan, queue_size=1)
@@ -134,7 +137,7 @@ class ImageSubscriber:
             p_dst = np.zeros(100)
             
             for col in range(self.col_left, self.col_right):
-                for row in range(self.img_height - 2, self.row_upper, -1):   # ignore the first and last row
+                for row in range(self.img_height - 1 - self.skip_row_bottom, self.row_upper - 1 + self.skip_row_upper, -1):   # ignore the first and last row
                     if img_cliff[row][col] == 255 and img_cliff[row - 1][col] == 0:
                         img_edge[row][col] = 255
 
@@ -175,9 +178,9 @@ class ImageSubscriber:
             img_cliff_msg.header = msg.header
             self.img_pub.publish(img_cliff_msg)
 
-            img_msg = self.bridge.cv2_to_imgmsg(img_edge, encoding="32FC1")
-            img_msg.header = msg.header
-            self.debug_pub.publish(img_msg)
+            img_edge_msg = self.bridge.cv2_to_imgmsg(img_edge, encoding="32FC1")
+            img_edge_msg.header = msg.header
+            self.debug_pub.publish(img_edge_msg)
 
         except Exception as e:
             print(e)

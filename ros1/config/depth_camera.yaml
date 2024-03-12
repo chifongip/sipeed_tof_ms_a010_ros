@@ -1,0 +1,17 @@
+img_topic: sipeed_tof_ms_a010/depth/image_raw
+info_topic: sipeed_tof_ms_a010/depth/camera_info
+frame_id: dep_cam_front_link
+cam_height: 0.34
+cam_angle: 15
+cliff_threshold: 0.1
+img_freq: 10
+range_min: 0.2
+range_max: 2.5
+cam_x: 0.2
+cam_y: 0.0
+cam_z: 0.34
+row_upper: 70
+col_left: 20
+col_right: 80
+skip_row_upper: 1
+skip_row_bottom: 1

@@ -1,8 +1,8 @@
 #include <cv_bridge/cv_bridge.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/PointField.h>
+// #include <sensor_msgs/PointCloud2.h>
+// #include <sensor_msgs/PointField.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <std_msgs/Header.h>
 
@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
   // ss.str("");
   // ss << to_device << "/depth/points";
   // ros::Publisher publisher_pointcloud = node_obj.advertise<sensor_msgs::PointCloud2>(strdup(ss.str().c_str()), 10);
-  ros::Publisher publisher_pointcloud = node_obj.advertise<sensor_msgs::PointCloud2>("depth/points", 1);
+  // ros::Publisher publisher_pointcloud = node_obj.advertise<sensor_msgs::PointCloud2>("depth/points", 1);
 
   // ss.str("");
   // ss << to_device << "/depth/camera_info";
@@ -137,6 +137,7 @@ int main(int argc, char **argv) {
             *cv_bridge::CvImage(header, "8UC1", md).toImageMsg().get();
         publisher_depth.publish(msg_depth);
       }
+      /*
       {
         sensor_msgs::PointCloud2 pcmsg;
         pcmsg.header = header;
@@ -210,6 +211,7 @@ int main(int argc, char **argv) {
           }
         publisher_pointcloud.publish(pcmsg);
       }
+      */
       {
         sensor_msgs::CameraInfo cam_info;
         cam_info.header = header;
