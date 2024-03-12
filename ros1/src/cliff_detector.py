@@ -116,6 +116,8 @@ class ImageSubscriber:
             # convert ROS image message to OpenCV format
             img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
 
+            img = np.rot90(img, 2)
+
             # img_cliff = img.copy()
             img_cliff = np.zeros([100, 100])
             img_edge = np.zeros([100, 100])
@@ -123,11 +125,15 @@ class ImageSubscriber:
             for col in range(self.col_left, self.col_right):
                 for row in range(self.img_height - 1, self.row_upper - 1, -1):
                     dst = pow(((img[row, col]) / 5.1), 2) / 1000
-                    if dst > (self.dist_to_ground[row] + self.cliff_threshold) and img[row, col] != 255:
-                        # and dst > self.range_min and dst < self.range_max:
-                        img_cliff[row][col] = 0
-                    else:
+                    if dst < (self.dist_to_ground[row] + self.cliff_threshold): 
                         img_cliff[row][col] = 255
+                    else:
+                        img_cliff[row][col] = 0
+                    # if dst > (self.dist_to_ground[row] + self.cliff_threshold) and img[row, col] != 255:
+                    #     # and dst > self.range_min and dst < self.range_max:
+                    #     img_cliff[row][col] = 0
+                    # else:
+                    #     img_cliff[row][col] = 255
             
             img_cliff = cv2.dilate(img_cliff, self.kernel, iterations=3)
             img_cliff = cv2.erode(img_cliff, self.kernel, iterations=3)
@@ -162,7 +168,7 @@ class ImageSubscriber:
             scan_msg = LaserScan()
 
             scan_msg.header.stamp = msg.header.stamp
-            scan_msg.header.frame_id = "base_link"
+            scan_msg.header.frame_id = "laser_link"
 
             scan_msg.angle_min = -self.horizontal_fov / 2
             scan_msg.angle_max = self.horizontal_fov / 2
