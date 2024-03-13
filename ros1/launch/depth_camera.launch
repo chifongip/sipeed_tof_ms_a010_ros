@@ -26,11 +26,12 @@
 			<param name="cam_x" value="0.2" />
 			<param name="cam_y" value="0.0" />
 			<param name="cam_z" value="0.34" />
-			<param name="row_upper" value="60" />
+			<param name="row_upper" value="70" />
 			<param name="col_left" value="20" />
 			<param name="col_right" value="80" />
 			<param name="skip_row_upper" value="1" />
 			<param name="skip_row_bottom" value="1" />
+			<param name="tilt_compensation" value="3" />
 		</node>
 	</group>
 

@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 import math
 
+
 class ImageSubscriber:
     def __init__(self):
         self.img_topic = rospy.get_param("cliff_detector/img_topic", "sipeed_tof_ms_a010/depth/image_raw")
@@ -34,6 +35,9 @@ class ImageSubscriber:
 
         self.skip_row_upper = rospy.get_param("cliff_detector/skip_row_upper", 1)
         self.skip_row_bottom = rospy.get_param("cliff_detector/skip_row_bottom", 1)
+
+        self.tilt_compensation = rospy.get_param("cliff_detector/tilt_compensation", 3)
+        self.tilt_compensation = np.deg2rad(self.tilt_compensation)
 
         self.kernel = np.ones((3, 3), np.uint8)
 
@@ -98,14 +102,18 @@ class ImageSubscriber:
             self.delta_row[i] = self.vertical_fov * (i - self.cy - 0.5) / (self.img_height - 1)
 
 
-    def calcGroundDistancesForImgRows(self, dst_to_ground_output, cam_height, cam_angle): 
+    def calcGroundDistancesForImgRows(self, cam_height, cam_angle): 
+        dst_to_ground = np.zeros(self.img_height)
         alpha = np.deg2rad(cam_angle)
+
         for i in range(self.img_height):
             if self.delta_row[i] + alpha > 0:
-                dst_to_ground_output[i] = cam_height * np.sin(np.pi / 2 - self.delta_row[i]) \
+                dst_to_ground[i] = cam_height * np.sin(np.pi / 2 - self.delta_row[i]) \
                     / np.cos(np.pi / 2 - self.delta_row[i] - alpha)
             else:
-                dst_to_ground_output[i] = 100
+                dst_to_ground[i] = 100
+
+        return dst_to_ground
 
 
     def camera_info_callback(self, msg):
@@ -116,7 +124,7 @@ class ImageSubscriber:
         self.camera_info_received = True
 
         self.calcDeltaAngleForImgRows()
-        self.calcGroundDistancesForImgRows(self.dist_to_ground_init, self.cam_height, self.cam_angle)
+        self.dist_to_ground_init = self.calcGroundDistancesForImgRows(self.cam_height, self.cam_angle)
         
         self.camera_info_sub.unregister()
 
@@ -127,12 +135,11 @@ class ImageSubscriber:
                 rospy.logwarn("Camera calibration parameters not received yet.")
                 return
             
-            if abs(self.tilt_angle) > np.deg2rad(3):
-                print(np.rad2deg(self.tilt_angle))
-                self.calcGroundDistancesForImgRows(self.dist_to_ground, self.cam_height - self.extra_height, self.cam_angle + np.rad2deg(self.tilt_angle))
+            if abs(self.tilt_angle) > self.tilt_compensation:
+                self.dist_to_ground = self.calcGroundDistancesForImgRows(self.cam_height - self.extra_height, self.cam_angle + np.rad2deg(self.tilt_angle))
             else:
                 self.dist_to_ground = self.dist_to_ground_init
-                
+
             # convert ROS image message to OpenCV format
             img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
 
