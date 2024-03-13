@@ -4,7 +4,7 @@
 		args="0.2 0 0.34 0 0.1305262 0 0.9914449 base_link dep_cam_front_link 100" />
 	
 	<group ns="dep_cam_front">
-		<node pkg="sipeed_tof_ms_a010" type="node" name="sipeed_tof_ms_a010" output="screen">
+		<node pkg="sipeed_tof_ms_a010" type="node" name="sipeed_tof_ms_a010">
 			<param name="device" value="/dev/depth_camera" />
 			<param name="frame_id" value="dep_cam_front_link" />
 		</node>
