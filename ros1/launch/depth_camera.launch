@@ -19,7 +19,7 @@
 			<param name="frame_id" value="dep_cam_front_link" />
 			<param name="cam_height" value="0.34" />
 			<param name="cam_angle" value="15" />
-			<param name="cliff_threshold" value="0.5" />
+			<param name="cliff_threshold" value="0.1" />
 			<param name="img_freq" value="10" />
 			<param name="range_min" value="0.2" />
 			<param name="range_max" value="2.5" />

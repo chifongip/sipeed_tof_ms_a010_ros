@@ -3,6 +3,8 @@
 import rospy
 from sensor_msgs.msg import Image, CameraInfo
 from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import Imu
+import tf
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
@@ -22,9 +24,9 @@ class ImageSubscriber:
         self.range_min = rospy.get_param("cliff_detector/range_min", 0.2)
         self.range_max = rospy.get_param("cliff_detector/range_max", 2.5)
 
-        cam_x = rospy.get_param("cliff_detector/cam_x", 0.2)
-        cam_y = rospy.get_param("cliff_detector/cam_y", 0.0)
-        cam_z = rospy.get_param("cliff_detector/cam_z", 0.3)
+        self.cam_x = rospy.get_param("cliff_detector/cam_x", 0.2)
+        self.cam_y = rospy.get_param("cliff_detector/cam_y", 0.0)
+        self.cam_z = rospy.get_param("cliff_detector/cam_z", 0.3)
 
         self.row_upper = rospy.get_param("cliff_detector/row_upper", 70)
         self.col_left = rospy.get_param("cliff_detector/col_left", 20)
@@ -48,26 +50,32 @@ class ImageSubscriber:
         self.horizontal_fov = np.deg2rad(70)
 
         self.dist_to_ground = np.zeros(100)
+        self.dist_to_ground_init = np.zeros(100)
 
         # ZYX = 0, 15, 0
-        self.trans = np.array([[ 0.9659258, 0.0000000, 0.2588190, cam_x], 
-                               [ 0.0000000, 1.0000000, 0.0000000, cam_y], 
-                               [-0.2588190, 0.0000000, 0.9659258, cam_z],
+        self.trans = np.array([[ 0.9659258, 0.0000000, 0.2588190, self.cam_x], 
+                               [ 0.0000000, 1.0000000, 0.0000000, self.cam_y], 
+                               [-0.2588190, 0.0000000, 0.9659258, self.cam_z],
                                [0.0, 0.0, 0.0, 1.0]])
         
         # ZYX = 35, 15, 0
-        # self.trans = np.array([[ 0.7912401, -0.5735765, 0.2120122, cam_x], 
-        #                        [ 0.5540323,  0.8191521, 0.1484525, cam_y], 
-        #                        [-0.2588190,  0.0000000, 0.9659258, cam_z],
+        # self.trans = np.array([[ 0.7912401, -0.5735765, 0.2120122, self.cam_x], 
+        #                        [ 0.5540323,  0.8191521, 0.1484525, self.cam_y], 
+        #                        [-0.2588190,  0.0000000, 0.9659258, self.cam_z],
         #                        [0.0, 0.0, 0.0, 1.0]])
 
         # ZYX = -35, 15, 0
-        # self.trans = np.array([[ 0.7912401, 0.5735765, 0.2120122, cam_x], 
-        #                        [-0.5540323, 0.8191521,-0.1484525, cam_y], 
-        #                        [-0.2588190, 0.0000000, 0.9659258, cam_z],
+        # self.trans = np.array([[ 0.7912401, 0.5735765, 0.2120122, self.cam_x], 
+        #                        [-0.5540323, 0.8191521,-0.1484525, self.cam_y], 
+        #                        [-0.2588190, 0.0000000, 0.9659258, self.cam_z],
         #                        [0.0, 0.0, 0.0, 1.0]])
         
+        self.tilt_angle = 0
+        self.extra_height = 0
+
         self.bridge = CvBridge()
+
+        self.imu_sub = rospy.Subscriber("/imu/data", Imu, self.imu_callback)
 
         self.img_sub = rospy.Subscriber(self.img_topic, Image, self.image_callback)
         self.camera_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, 
@@ -79,19 +87,25 @@ class ImageSubscriber:
         self.scan_pub = rospy.Publisher("depth/scan", LaserScan, queue_size=1)
 
 
+    def imu_callback(self, msg):
+        (_, self.tilt_angle, _) = tf.transformations.euler_from_quaternion(
+                                    [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w])
+        self.extra_height = self.cam_x * np.sin(self.tilt_angle)
+
+
     def calcDeltaAngleForImgRows(self):
         for i in range(self.img_height):
             self.delta_row[i] = self.vertical_fov * (i - self.cy - 0.5) / (self.img_height - 1)
 
 
-    def calcGroundDistancesForImgRows(self): 
-        alpha = np.deg2rad(self.cam_angle)
+    def calcGroundDistancesForImgRows(self, dst_to_ground_output, cam_height, cam_angle): 
+        alpha = np.deg2rad(cam_angle)
         for i in range(self.img_height):
             if self.delta_row[i] + alpha > 0:
-                self.dist_to_ground[i] = self.cam_height * np.sin(np.pi / 2 - self.delta_row[i]) \
+                dst_to_ground_output[i] = cam_height * np.sin(np.pi / 2 - self.delta_row[i]) \
                     / np.cos(np.pi / 2 - self.delta_row[i] - alpha)
             else:
-                self.dist_to_ground[i] = 100
+                dst_to_ground_output[i] = 100
 
 
     def camera_info_callback(self, msg):
@@ -102,7 +116,7 @@ class ImageSubscriber:
         self.camera_info_received = True
 
         self.calcDeltaAngleForImgRows()
-        self.calcGroundDistancesForImgRows()
+        self.calcGroundDistancesForImgRows(self.dist_to_ground_init, self.cam_height, self.cam_angle)
         
         self.camera_info_sub.unregister()
 
@@ -113,6 +127,12 @@ class ImageSubscriber:
                 rospy.logwarn("Camera calibration parameters not received yet.")
                 return
             
+            if abs(self.tilt_angle) > np.deg2rad(3):
+                print(np.rad2deg(self.tilt_angle))
+                self.calcGroundDistancesForImgRows(self.dist_to_ground, self.cam_height - self.extra_height, self.cam_angle + np.rad2deg(self.tilt_angle))
+            else:
+                self.dist_to_ground = self.dist_to_ground_init
+                
             # convert ROS image message to OpenCV format
             img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
 
