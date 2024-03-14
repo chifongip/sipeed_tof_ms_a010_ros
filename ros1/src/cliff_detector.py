@@ -76,14 +76,14 @@ class ImageSubscriber:
         
         self.tilt_angle = 0
         self.extra_height = 0
+        self.imu_quat = []
 
         self.bridge = CvBridge()
 
-        self.imu_sub = rospy.Subscriber("/imu/data", Imu, self.imu_callback)
+        self.imu_sub = rospy.Subscriber("/imu/data", Imu, self.imuCallback, queue_size=1)
 
-        self.img_sub = rospy.Subscriber(self.img_topic, Image, self.image_callback)
-        self.camera_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, 
-            self.camera_info_callback, queue_size=1)
+        self.img_sub = rospy.Subscriber(self.img_topic, Image, self.imageCallback, queue_size=1)
+        self.camera_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.cameraInfoCallback, queue_size=1)
         
         self.cliff_pub = rospy.Publisher("depth/cliff", Image, queue_size=1)
         self.debug_pub = rospy.Publisher("depth/debug_image", Image, queue_size=1)
@@ -91,10 +91,8 @@ class ImageSubscriber:
         self.scan_pub = rospy.Publisher("depth/scan", LaserScan, queue_size=1)
 
 
-    def imu_callback(self, msg):
-        (_, self.tilt_angle, _) = tf.transformations.euler_from_quaternion(
-                                    [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w])
-        self.extra_height = self.cam_x * np.sin(self.tilt_angle)
+    def imuCallback(self, msg):
+        self.imu_quat = [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
 
 
     def calcDeltaAngleForImgRows(self):
@@ -116,7 +114,7 @@ class ImageSubscriber:
         return dst_to_ground
 
 
-    def camera_info_callback(self, msg):
+    def cameraInfoCallback(self, msg):
         self.fx = msg.K[0]
         self.fy = msg.K[4]
         self.cx = msg.K[2]
@@ -129,13 +127,17 @@ class ImageSubscriber:
         self.camera_info_sub.unregister()
 
 
-    def image_callback(self, msg):
+    def imageCallback(self, msg):
         try:
             if not self.camera_info_received:
                 rospy.logwarn("Camera calibration parameters not received yet.")
                 return
-            
+
+            (_, self.tilt_angle, _) = tf.transformations.euler_from_quaternion(
+                                        [self.imu_quat[0], self.imu_quat[1], self.imu_quat[2], self.imu_quat[3]])
+
             if abs(self.tilt_angle) > self.tilt_compensation:
+                self.extra_height = self.cam_x * np.sin(self.tilt_angle)
                 self.dist_to_ground = self.calcGroundDistancesForImgRows(self.cam_height - self.extra_height, self.cam_angle + np.rad2deg(self.tilt_angle))
             else:
                 self.dist_to_ground = self.dist_to_ground_init
@@ -151,12 +153,16 @@ class ImageSubscriber:
 
             for col in range(self.col_left, self.col_right):
                 for row in range(self.img_height - 1, self.row_upper - 1, -1):
-                    dst = pow(((img[row, col]) / 5.1), 2) / 1000
-                    if dst < (self.dist_to_ground[row] + self.cliff_threshold): 
-                        img_cliff[row][col] = 255
+                    # 0: cliff; 127: unknown; 255: ground
+                    if img[row, col] == 255:
+                        img_cliff[row][col] = 127
                     else:
-                        img_cliff[row][col] = 0
-                    # if dst > (self.dist_to_ground[row] + self.cliff_threshold) and img[row, col] != 255:
+                        dst = pow(((img[row, col]) / 5.1), 2) / 1000
+                        if dst < (self.dist_to_ground[row] + self.cliff_threshold): 
+                            img_cliff[row][col] = 255
+                        else:
+                            img_cliff[row][col] = 0
+                    # if dst > (self.dist_to_ground[row] + self.cliff_threshold):
                     #     # and dst > self.range_min and dst < self.range_max:
                     #     img_cliff[row][col] = 0
                     # else:
@@ -165,13 +171,13 @@ class ImageSubscriber:
             img_cliff = cv2.dilate(img_cliff, self.kernel, iterations=3)
             img_cliff = cv2.erode(img_cliff, self.kernel, iterations=3)
 
-            img_cliff = img_cliff.astype(np.float32)
+            img_cliff = img_cliff.astype(np.uint8)
 
             p_dst = np.zeros(100)
             
             for col in range(self.col_left, self.col_right):
                 for row in range(self.img_height - 1 - self.skip_row_bottom, self.row_upper - 1 + self.skip_row_upper, -1):   # ignore the first and last row
-                    if img_cliff[row][col] == 255 and img_cliff[row - 1][col] == 0:
+                    if img_cliff[row][col] == 255 and (img_cliff[row - 1][col] == 0 or img_cliff[row - 1][col] == 127):
                         img_edge[row][col] = 255
 
                         u = (col - self.cx) / self.fx
@@ -190,7 +196,7 @@ class ImageSubscriber:
 
                         break
 
-            img_edge = img_edge.astype(np.float32)
+            img_edge = img_edge.astype(np.uint8)
 
             scan_msg = LaserScan()
 
@@ -207,11 +213,11 @@ class ImageSubscriber:
             scan_msg.ranges = p_dst[::-1]
             self.scan_pub.publish(scan_msg)
 
-            img_cliff_msg = self.bridge.cv2_to_imgmsg(img_cliff, encoding="32FC1")
+            img_cliff_msg = self.bridge.cv2_to_imgmsg(img_cliff, encoding="8UC1")
             img_cliff_msg.header = msg.header
             self.cliff_pub.publish(img_cliff_msg)
 
-            img_edge_msg = self.bridge.cv2_to_imgmsg(img_edge, encoding="32FC1")
+            img_edge_msg = self.bridge.cv2_to_imgmsg(img_edge, encoding="8UC1")
             img_edge_msg.header = msg.header
             self.debug_pub.publish(img_edge_msg)
 
