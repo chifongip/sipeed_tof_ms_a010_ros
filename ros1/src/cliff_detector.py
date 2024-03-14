@@ -52,6 +52,8 @@ class ImageSubscriber:
         self.delta_row = np.zeros(100) 
         self.vertical_fov = np.deg2rad(60)
         self.horizontal_fov = np.deg2rad(70)
+        self.h_fov_min = 0
+        self.h_fov_max = 0
 
         self.dist_to_ground = np.zeros(100)
         self.dist_to_ground_init = np.zeros(100)
@@ -91,10 +93,6 @@ class ImageSubscriber:
         self.scan_pub = rospy.Publisher("depth/scan", LaserScan, queue_size=1)
 
 
-    def imuCallback(self, msg):
-        self.imu_quat = [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
-
-
     def calcDeltaAngleForImgRows(self):
         for i in range(self.img_height):
             self.delta_row[i] = self.vertical_fov * (i - self.cy - 0.5) / (self.img_height - 1)
@@ -114,6 +112,10 @@ class ImageSubscriber:
         return dst_to_ground
 
 
+    def imuCallback(self, msg):
+        self.imu_quat = [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
+        
+
     def cameraInfoCallback(self, msg):
         self.fx = msg.K[0]
         self.fy = msg.K[4]
@@ -123,6 +125,9 @@ class ImageSubscriber:
 
         self.calcDeltaAngleForImgRows()
         self.dist_to_ground_init = self.calcGroundDistancesForImgRows(self.cam_height, self.cam_angle)
+
+        self.h_fov_min = - self.horizontal_fov * (self.img_width - self.cx) / (self.img_width)
+        self.h_fov_max = self.horizontal_fov * (self.cx) / (self.img_width)
         
         self.camera_info_sub.unregister()
 
@@ -203,8 +208,8 @@ class ImageSubscriber:
             scan_msg.header.stamp = msg.header.stamp
             scan_msg.header.frame_id = "laser_link"
 
-            scan_msg.angle_min = -self.horizontal_fov / 2
-            scan_msg.angle_max = self.horizontal_fov / 2
+            scan_msg.angle_min = self.h_fov_min
+            scan_msg.angle_max = self.h_fov_max
             scan_msg.angle_increment = (scan_msg.angle_max - scan_msg.angle_min) / (self.img_width - 1)
             scan_msg.time_increment = 0.0
             scan_msg.scan_time = 1 / self.img_freq
