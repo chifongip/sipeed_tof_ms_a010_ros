@@ -1,0 +1,34 @@
+<launch>
+	<node pkg="tf" type="static_transform_publisher" name="dep_cam_bottom_link_to_base_link" 
+		args="0.2 0 0.315 0.6743797 0.2126311 -0.2126311 0.6743797 base_link dep_cam_bottom_link 100" />
+	
+	<node pkg="tf" type="static_transform_publisher" name="dep_cam_top_link_to_base_link" 
+		args="0.2 0 0.355 0.6743797 -0.2126311 0.2126311 0.6743797 base_link dep_cam_top_link 100" />
+
+	<group ns="dep_cam_top_link">
+		<node pkg="sipeed_tof_ms_a010" type="node" name="sipeed_tof_ms_a010" output="screen">
+			<param name="device" value="/dev/ttyUSB0" />
+			<param name="frame_id" value="dep_cam_top_link" />
+		</node>
+		<node pkg="sipeed_tof_ms_a010" type="point_cloud_processing_node" name="point_cloud_processing_node">
+			<param name="sub_topic" value="sipeed_tof_ms_a010/depth/points" />
+			<param name="MeanK" value="20" />
+			<param name="StddevMulThresh" value="0.5" />
+		</node>
+	</group>
+
+	<group ns="dep_cam_bottom_link">
+		<node pkg="sipeed_tof_ms_a010" type="node" name="sipeed_tof_ms_a010" output="screen">
+			<param name="device" value="/dev/ttyUSB2" />
+			<param name="frame_id" value="dep_cam_bottom_link" />
+		</node>
+		<node pkg="sipeed_tof_ms_a010" type="point_cloud_processing_node" name="point_cloud_processing_node">
+			<param name="sub_topic" value="sipeed_tof_ms_a010/depth/points" />
+			<param name="MeanK" value="20" />
+			<param name="StddevMulThresh" value="0.5" />
+		</node>
+	</group>
+
+</launch>
+
+
