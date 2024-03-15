@@ -126,8 +126,8 @@ class ImageSubscriber:
         self.calcDeltaAngleForImgRows()
         self.dist_to_ground_init = self.calcGroundDistancesForImgRows(self.cam_height, self.cam_angle)
 
-        self.h_fov_min = - self.horizontal_fov * (self.img_width - self.cx) / (self.img_width)
-        self.h_fov_max = self.horizontal_fov * (self.cx) / (self.img_width)
+        self.h_fov_min = - self.horizontal_fov * (self.img_width - 1 - self.cx - 0.5) / (self.img_width - 1)
+        self.h_fov_max = self.horizontal_fov * (- self.cx - 0.5) / (self.img_width - 1)
         
         self.camera_info_sub.unregister()
 
