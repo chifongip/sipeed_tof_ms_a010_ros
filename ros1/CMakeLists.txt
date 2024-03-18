@@ -162,7 +162,7 @@ target_link_libraries(point_cloud_processing_node
 )
 
 catkin_install_python(PROGRAMS
-  src/cliff_detector.py
+  scripts/cliff_detector.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
