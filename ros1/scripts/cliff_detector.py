@@ -127,7 +127,7 @@ class ImageSubscriber:
         self.dist_to_ground_init = self.calcGroundDistancesForImgRows(self.cam_height, self.cam_angle)
 
         self.h_fov_min = - self.horizontal_fov * (self.img_width - 1 - self.cx - 0.5) / (self.img_width - 1)
-        self.h_fov_max = self.horizontal_fov * (- self.cx - 0.5) / (self.img_width - 1)
+        self.h_fov_max = - self.horizontal_fov * (- self.cx - 0.5) / (self.img_width - 1)
         
         self.camera_info_sub.unregister()
 
@@ -206,7 +206,7 @@ class ImageSubscriber:
             scan_msg = LaserScan()
 
             scan_msg.header.stamp = msg.header.stamp
-            scan_msg.header.frame_id = "laser_link"
+            scan_msg.header.frame_id = "dep_cam_laser_link"
 
             scan_msg.angle_min = self.h_fov_min
             scan_msg.angle_max = self.h_fov_max
