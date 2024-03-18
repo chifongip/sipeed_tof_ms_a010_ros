@@ -2,6 +2,7 @@ import serial
 import numpy as np
 import cv2
 import time
+import json
 
 
 def display_image(frame_data):
@@ -49,10 +50,20 @@ antimmi_value = -1                          # disable anti-mmi
 command = "AT+ANTIMMI=%1d\r" % antimmi_value
 ser.write(command.encode("utf-8"))
 
+# command = "AT+COEFF?"
+# ser.write(command.encode("utf-8"))
+# response = ser.readline().decode().strip()
+# cparms = json.loads(response)
+# print(cparms)
+
+# ser.write(b"AT+COEFF?\r")
+# response = ser.readline()
+# print(response)
+
 # Initialize the image array
 image_array = np.zeros((100, 100), dtype=np.uint8)
 
-time.sleep(3)
+time.sleep(1)
 
 print("connected")
 
