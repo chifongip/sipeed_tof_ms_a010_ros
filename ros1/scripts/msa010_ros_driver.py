@@ -3,6 +3,7 @@
 import rospy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
+from std_msgs.msg import Header
 
 import serial
 import numpy as np
@@ -21,7 +22,20 @@ class msa010Driver:
         self.u0 = rospy.get_param("msa010_ros_driver/u0", 50)
         self.v0 = rospy.get_param("msa010_ros_driver/v0", 50)
 
+        self.header = Header()
+        self.header.frame_id = self.frame_id
+
+        self.cam_info = CameraInfo()
+        self.cam_info.height = 100
+        self.cam_info.width = 100
+        self.cam_info.distortion_model = "plumb_bob"
+        self.cam_info.D = [0, 0, 0, 0, 0]
+        self.cam_info.K = [self.fx, 0, self.u0, 0, self.fy, self.v0, 0, 0, 1]
+        self.cam_info.R = [1, 0, 0, 0, 1, 0, 0, 0, 1]
+        self.cam_info.P = [self.fx, 0, self.u0, 0, 0, self.fy, self.v0, 0, 0, 0, 1, 0]
+
         self.depth_img_pub = rospy.Publisher("depth/image_raw", Image, queue_size=1)
+        self.camera_info_pub = rospy.Publisher("depth/camera_info", CameraInfo, queue_size=1)
 
         self.ser = serial.Serial(port = self.device,
                                 baudrate = 115200,
@@ -127,16 +141,25 @@ class msa010Driver:
                         image_pixels = np.frombuffer(image_data, dtype=np.uint8)
                         image_array = np.reshape(image_pixels, (100, 100))
 
+                        # header 
+                        self.header.stamp = rospy.Time.now()
+
+                        # camera info
+                        self.cam_info.header = self.header
+                        self.camera_info_pub.publish(self.cam_info)
+
+                        # depth image 
                         img_msg = self.bridge.cv2_to_imgmsg(image_array, encoding="8UC1")
-                        img_msg.header.stamp = rospy.Time.now()
-                        img_msg.header.frame_id = self.frame_id
+                        img_msg.header = self.header
                         self.depth_img_pub.publish(img_msg)
                         # image_disp = cv2.resize(image_array, (500, 500))
                         # self.display_image(image_disp)
+
                     else:
                         ser.close()
                         time.sleep(0.1)
                         ser.open()
+                        
             except:
                 pass
 
