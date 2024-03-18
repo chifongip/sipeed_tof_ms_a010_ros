@@ -9,8 +9,7 @@ def display_image(frame_data):
     cv2.imshow("Figure", frame_data)
     cv2.waitKey(1)
 
-# Open the serial port
-ser = serial.Serial(port = "/dev/ttyUSB0",
+ser = serial.Serial(port = "/dev/depth_camera",
                     baudrate = 115200,
                     bytesize = serial.EIGHTBITS,
                     parity = serial.PARITY_NONE,
@@ -63,7 +62,7 @@ ser.write(command.encode("utf-8"))
 # Initialize the image array
 image_array = np.zeros((100, 100), dtype=np.uint8)
 
-time.sleep(1)
+time.sleep(3)
 
 print("connected")
 
