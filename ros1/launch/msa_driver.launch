@@ -10,11 +10,6 @@
 		<node pkg="sipeed_tof_ms_a010" type="msa010_ros_driver.py" name="msa010_ros_driver" output="screen">
 			<param name="device" value="/dev/depth_camera" />
 			<param name="frame_id" value="dep_cam_front_link" />
-			<param name="debug" value="0" />
-			<param name="fx" value="75" />
-			<param name="fy" value="75" />
-			<param name="u0" value="47.31666564941406" />
-			<param name="v0" value="46.5" />
 		</node>
 	</group>
 

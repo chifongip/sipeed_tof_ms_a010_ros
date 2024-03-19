@@ -14,11 +14,6 @@
 		<node pkg="sipeed_tof_ms_a010" type="msa010_ros_driver.py" name="msa010_ros_driver" output="screen">
 			<param name="device" value="/dev/depth_camera" />
 			<param name="frame_id" value="dep_cam_front_link" />
-			<param name="debug" value="0" />
-			<param name="fx" value="75" />
-			<param name="fy" value="75" />
-			<param name="u0" value="47.31666564941406" />
-			<param name="v0" value="46.5" />
 		</node>
 		<!-- <node pkg="sipeed_tof_ms_a010" type="point_cloud_processing_node" name="point_cloud_processing_node">
 			<param name="sub_topic" value="sipeed_tof_ms_a010/depth/points" />
@@ -26,8 +21,8 @@
 			<param name="StddevMulThresh" value="0.5" />
 		</node> -->
 		<node pkg="sipeed_tof_ms_a010" type="cliff_detector.py" name="cliff_detector" output="screen">
-			<param name="img_topic" value="sipeed_tof_ms_a010/depth/image_raw" />
-			<param name="info_topic" value="sipeed_tof_ms_a010/depth/camera_info" />
+			<param name="img_topic" value="depth/image_raw" />
+			<param name="info_topic" value="depth/camera_info" />
 			<param name="frame_id" value="dep_cam_front_link" />
 			<param name="cam_height" value="0.34" />
 			<param name="cam_angle" value="15" />
