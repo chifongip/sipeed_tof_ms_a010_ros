@@ -161,6 +161,11 @@ target_link_libraries(point_cloud_processing_node
   pcl_filters
 )
 
+add_executable(depth_image_to_point_cloud_node src/pc_publisher.cpp)
+target_link_libraries(depth_image_to_point_cloud_node
+  ${catkin_LIBRARIES}
+)
+
 catkin_install_python(PROGRAMS
   scripts/cliff_detector.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

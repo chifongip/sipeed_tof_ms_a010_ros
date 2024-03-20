@@ -11,6 +11,7 @@
 			<param name="device" value="/dev/depth_camera" />
 			<param name="frame_id" value="dep_cam_front_link" />
 		</node>
+		<node pkg="sipeed_tof_ms_a010" type="depth_image_to_point_cloud_node" name="depth_image_to_point_cloud_node" output="screen" />
 	</group>
 
 </launch>
