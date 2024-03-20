@@ -4,33 +4,59 @@
 
 	<node pkg="tf" type="static_transform_publisher" name="dep_cam_bottom_link_to_base_link" 
 		args="0.2 0 0.315 0.6743797 0.2126311 -0.2126311 0.6743797 base_link dep_cam_bottom_link 100" />
+
+	<node pkg="tf" type="static_transform_publisher" name="dep_cam_laser_link_to_base_link" 
+		args="0 0 0.315 0 0 0 1 base_link dep_cam_laser_link 100" />
 	
 	<group ns="dep_cam_top">
 		<node pkg="sipeed_tof_ms_a010" type="msa010_ros_driver.py" name="msa010_ros_driver">
 			<param name="device" value="/dev/depth_camera_top" />
 			<param name="frame_id" value="dep_cam_top_link" />
-			<param name="rot_deg" value="0" />		<!-- 90 deg, counterclockwise -->
 		</node>
 		<node pkg="sipeed_tof_ms_a010" type="depth_image_to_point_cloud_node" name="depth_image_to_point_cloud_node" output="screen" />
-<!-- 		<node pkg="sipeed_tof_ms_a010" type="point_cloud_processing_node" name="point_cloud_processing_node">
+		<node pkg="sipeed_tof_ms_a010" type="point_cloud_processing_node" name="point_cloud_processing_node">
 			<param name="sub_topic" value="depth/points" />
-			<param name="MeanK" value="20" />
+			<param name="MeanK" value="10" />
 			<param name="StddevMulThresh" value="0.5" />
-		</node> -->
+			<param name="RadiusSearch" value="0.1" />
+			<param name="MinNeighborsInRadius" value="3" />
+		</node>
 	</group>
 
 	<group ns="dep_cam_bottom">
 		<node pkg="sipeed_tof_ms_a010" type="msa010_ros_driver.py" name="msa010_ros_driver">
 			<param name="device" value="/dev/depth_camera_bottom" />
 			<param name="frame_id" value="dep_cam_bottom_link" />
-			<param name="rot_deg" value="0" />		<!-- 90 deg, counterclockwise -->
 		</node>
 		<node pkg="sipeed_tof_ms_a010" type="depth_image_to_point_cloud_node" name="depth_image_to_point_cloud_node" output="screen" />
-<!-- 		<node pkg="sipeed_tof_ms_a010" type="point_cloud_processing_node" name="point_cloud_processing_node">
+		<node pkg="sipeed_tof_ms_a010" type="point_cloud_processing_node" name="point_cloud_processing_node">
 			<param name="sub_topic" value="depth/points" />
-			<param name="MeanK" value="20" />
+			<param name="MeanK" value="10" />
 			<param name="StddevMulThresh" value="0.5" />
-		</node> -->
+			<param name="RadiusSearch" value="0.1" />
+			<param name="MinNeighborsInRadius" value="3" />
+		</node>
+		<node pkg="sipeed_tof_ms_a010" type="cliff_detector.py" name="cliff_detector" output="screen">
+			<param name="img_topic" value="depth/image_raw" />
+			<param name="info_topic" value="depth/camera_info" />
+			<param name="frame_id" value="dep_cam_bottom_link" />
+			<param name="cam_height" value="0.315" />
+			<param name="cam_angle" value="35" />
+			<param name="cliff_threshold" value="0.1" />
+			<param name="img_freq" value="10" />
+			<param name="range_min" value="0.2" />
+			<param name="range_max" value="2.5" />
+			<param name="cam_x" value="0.2" />
+			<param name="cam_y" value="0.0" />
+			<param name="cam_z" value="0.315" />
+			<param name="row_upper" value="50" />
+			<param name="col_left" value="10" />
+			<param name="col_right" value="90" />
+			<param name="skip_row_upper" value="1" />
+			<param name="skip_row_bottom" value="1" />
+			<param name="tilt_compensation" value="3" />
+			<param name="rot_img" value="3" />
+		</node>
 	</group>
 
 </launch>
