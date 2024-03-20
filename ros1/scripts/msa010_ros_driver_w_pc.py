@@ -3,12 +3,15 @@
 import rospy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
+# from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
 
 import serial
 import numpy as np
 import cv2
+import time
 import json
+# import struct
 
 
 BAUD = {0: 9600, 1: 57600, 2: 115200, 3: 230400, 4: 460800, 5: 921600, 6: 1000000, 7: 2000000, 8: 3000000}
@@ -21,6 +24,7 @@ class msa010Driver:
 
         self.depth_img_pub = rospy.Publisher("depth/image_raw", Image, queue_size=1)
         self.camera_info_pub = rospy.Publisher("depth/camera_info", CameraInfo, queue_size=1)
+        # self.pc2_pub = rospy.Publisher("depth/points", PointCloud2, queue_size=1)
 
         self.ser = serial.Serial()
 
@@ -40,7 +44,7 @@ class msa010Driver:
         self.ser.open()
 
         print("Connected to Serial: ", self.ser.is_open)
-        # self.printSettings(self.ser)
+        self.printSettings(self.ser)
 
         self.setSettings(self.ser, baud_value=5)
         self.printSettings(self.ser)
@@ -66,6 +70,20 @@ class msa010Driver:
         self.cam_info.K = [self.fx, 0, self.u0, 0, self.fy, self.v0, 0, 0, 1]
         self.cam_info.R = [1, 0, 0, 0, 1, 0, 0, 0, 1]
         self.cam_info.P = [self.fx, 0, self.u0, 0, 0, self.fy, self.v0, 0, 0, 0, 1, 0]
+
+        # self.pc2_msg = PointCloud2()
+        # self.pc2_msg.height = 100
+        # self.pc2_msg.width = 100
+        # self.pc2_msg.is_bigendian = False
+        # self.pc2_msg.point_step = 12
+        # self.pc2_msg.row_step = self.pc2_msg.point_step * 100
+        # self.pc2_msg.is_dense = False
+        # fields = [PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
+        #           PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
+        #           PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1)]
+        #           # PointField(name="rgb", offset=12, datatype=PointField.UINT32, count=1)]
+        # self.pc2_msg.fields = fields
+        # # self.pc2_msg.data = bytearray(self.pc2_msg.height * self.pc2_msg.width * self.pc2_msg.point_step)
 
         self.setSettings(self.ser, disp_value=4)
         
@@ -230,6 +248,39 @@ class msa010Driver:
 
                         # image_disp = cv2.resize(image_array, (500, 500))
                         # self.display_image(image_disp)
+
+                        # # point cloud 
+                        # self.pc2_msg.header = self.header
+
+                        # # ptr = 0
+                        # data = []
+                        # for row in range(self.pc2_msg.height):
+                        #     for col in range(self.pc2_msg.width):
+                        #         cx = (col - self.u0) / self.fx
+                        #         cy = (row - self.v0) / self.fy
+
+                        #         dst = pow(image_array[row, col] / 5.1, 2) / 1000
+
+                        #         if image_array[row, col] == 255:
+                        #             x = np.nan
+                        #             y = np.nan
+                        #             z = np.nan
+                        #         else:
+                        #             x = dst
+                        #             y = -dst * cx
+                        #             z = -dst * cy
+
+                        #         data.append([x, y, z])
+
+                        #         # self.pc2_msg.data[ptr + 0:ptr + 4] = struct.pack('f', x)
+                        #         # self.pc2_msg.data[ptr + 4:ptr + 8] = struct.pack('f', y)
+                        #         # self.pc2_msg.data[ptr + 8:ptr + 12] = struct.pack('f', z)
+
+                        #         # ptr += self.pc2_msg.point_step
+
+                        # self.pc2_msg.data = np.asarray(data, np.float32).tobytes()
+                        
+                        # self.pc2_pub.publish(self.pc2_msg)
 
                         print("publishing:", self.header.seq)
 
