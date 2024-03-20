@@ -1,7 +1,7 @@
 <launch>
 
 	<node pkg="tf" type="static_transform_publisher" name="dep_cam_front_link_to_base_link" 
-		args="0.2 0 0.34 0 0.1305262 0 0.9914449 base_link dep_cam_front_link 100" />
+		args="0.2 0 0.34 0.9914449 0 -0.1305262 0 base_link dep_cam_front_link 100" />
 
 	<node pkg="tf" type="static_transform_publisher" name="dep_cam_laser_link_to_base_link" 
 		args="0 0 0.34 0 0 0 1 base_link dep_cam_laser_link 100" />
@@ -10,8 +10,18 @@
 		<node pkg="sipeed_tof_ms_a010" type="msa010_ros_driver.py" name="msa010_ros_driver" output="screen">
 			<param name="device" value="/dev/depth_camera" />
 			<param name="frame_id" value="dep_cam_front_link" />
+			<param name="rot_deg" value="0" />		<!-- 90 deg, counterclockwise -->
 		</node>
 		<node pkg="sipeed_tof_ms_a010" type="depth_image_to_point_cloud_node" name="depth_image_to_point_cloud_node" output="screen" />
 	</group>
+
+<!-- 	<node pkg="pointcloud_concatenate" type="pointcloud_concatenate_node" name="pc_concat" output="screen">
+		<param name="target_frame" value="$(arg target_frame)" />    
+		<param name="clouds" value="2" />
+		<param name="hz" value="10" />
+		<remap from="cloud_in1" to="$(arg cloud_in1)" />
+		<remap from="cloud_in2" to="$(arg cloud_in2)" />
+	    <remap from="cloud_out" to="$(arg cloud_out)" />
+  	</node> -->
 
 </launch>
