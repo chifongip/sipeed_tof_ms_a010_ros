@@ -88,6 +88,8 @@ class ImageSubscriber:
         self.extra_height = 0
         self.imu_quat = []
 
+        self.scan_msg = LaserScan()
+
         self.bridge = CvBridge()
 
         self.imu_sub = rospy.Subscriber("/imu/data", Imu, self.imuCallback, queue_size=1)
@@ -137,6 +139,15 @@ class ImageSubscriber:
         self.h_fov_min = - self.horizontal_fov * (self.img_width - 1 - self.cx - 0.5) / (self.img_width - 1)
         self.h_fov_max = - self.horizontal_fov * (- self.cx - 0.5) / (self.img_width - 1)
         
+        self.scan_msg.header.frame_id = "dep_cam_laser_link"
+        self.scan_msg.angle_min = self.h_fov_min
+        self.scan_msg.angle_max = self.h_fov_max
+        self.scan_msg.angle_increment = (self.scan_msg.angle_max - self.scan_msg.angle_min) / (self.img_width - 1)
+        self.scan_msg.time_increment = 0.0
+        self.scan_msg.scan_time = 1 / self.img_freq
+        self.scan_msg.range_min = self.range_min
+        self.scan_msg.range_max = self.range_max
+
         self.camera_info_sub.unregister()
 
 
@@ -211,20 +222,9 @@ class ImageSubscriber:
 
             img_edge = img_edge.astype(np.uint8)
 
-            scan_msg = LaserScan()
-
-            scan_msg.header.stamp = msg.header.stamp
-            scan_msg.header.frame_id = "dep_cam_laser_link"
-
-            scan_msg.angle_min = self.h_fov_min
-            scan_msg.angle_max = self.h_fov_max
-            scan_msg.angle_increment = (scan_msg.angle_max - scan_msg.angle_min) / (self.img_width - 1)
-            scan_msg.time_increment = 0.0
-            scan_msg.scan_time = 1 / self.img_freq
-            scan_msg.range_min = self.range_min
-            scan_msg.range_max = self.range_max
-            scan_msg.ranges = p_dst[::-1]
-            self.scan_pub.publish(scan_msg)
+            self.scan_msg.header.stamp = msg.header.stamp
+            self.scan_msg.ranges = p_dst[::-1]
+            self.scan_pub.publish(self.scan_msg)
 
             img_cliff_msg = self.bridge.cv2_to_imgmsg(img_cliff, encoding="8UC1")
             img_cliff_msg.header = msg.header

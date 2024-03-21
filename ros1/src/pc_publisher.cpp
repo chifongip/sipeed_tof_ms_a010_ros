@@ -46,7 +46,7 @@ public:
     u0 = msg->K[2];
     v0 = msg->K[5];
 
-    cam_info_flag = false;
+    cam_info_flag = true;
 
     cam_info_sub_.shutdown();
   }
@@ -54,7 +54,7 @@ public:
 
   void depthImageCallback(const sensor_msgs::Image::ConstPtr& msg)
   {
-    if (cam_info_flag) {
+    if (!cam_info_flag) {
       ROS_INFO("No Camera Info Received.");
       return;
     }
@@ -111,7 +111,7 @@ private:
   double u0;
   double v0;
 
-  bool cam_info_flag = true;
+  bool cam_info_flag = false;
 };
 
 
